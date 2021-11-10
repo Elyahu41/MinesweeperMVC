@@ -1,0 +1,51 @@
+﻿@model MinesweeperModel
+
+@{
+    ViewData["Title"] = "Game Page";
+}
+
+<div class="text-center">
+    <h1 class="display-4">Welcome to Minesweeper</h1>
+
+    <br/>
+
+    <p>Minesweeper Game! Number of moves: @Model.MoveCount, Number of Bombs: @Model.BombCount</p>
+    <p>Flag all the bombs to win!</p>
+    <a>Press this button to flag the bombs: </a> <button type="button" title="Flag" onclick="location.href = '@Url.Action("Flag", "Home")'" >Flag</button>
+</div>
+@{
+    if (Model.GameOver())
+    {
+        Context.Response.Redirect("/Home/GameOverWinPage");
+    }
+    }
+<table>
+    @{
+        for (int row = 0; row < Model.Rows; row++)
+        {
+        <tr>
+            @for (int col = 0; col < Model.Columns; col++)
+            {
+            <td>
+                @if (!Model.Display(row, col).Equals("B"))
+                {
+                    @if (Model.Display(row, col).Equals("[]") || (Model.Display(row, col).Equals("F") && Model.FlagClick))
+                    {
+                        @Html.ActionLink(Model.Display(row, col), "Move", "Home", new {row, col}, null)
+                    }
+                    else
+                    {
+                        @Model.Display(row, col)
+                    }
+                }
+                else
+                {
+                    Context.Response.Redirect("/Home/GameOverLosePage");
+                }
+            </td>
+            }
+        </tr>
+        }
+    }
+    
+</table>
