@@ -1,0 +1,106 @@
+@model GameViewModel
+@{
+    var game = Model.Game;
+    ViewData["Title"] = $"Play · {game.Difficulty.Name}";
+
+    var face = game.Status switch
+    {
+        GameStatus.Won => "😎",
+        GameStatus.Lost => "😵",
+        _ => "🙂"
+    };
+    var elapsed = game.StartedAt is { } start
+        ? (int)((game.FinishedAt ?? DateTimeOffset.UtcNow) - start).TotalSeconds
+        : 0;
+}
+
+<section class="game">
+    <div class="toolbar">
+        <form method="post" asp-action="New" class="difficulty-tabs">
+            @foreach (var d in Difficulty.All)
+            {
+                <button type="submit" name="difficulty" value="@d.Name"
+                        class="tab @(d.Name == game.Difficulty.Name ? "active" : "")">@d.Name</button>
+            }
+        </form>
+
+        <form method="post" asp-action="ToggleFlagMode">
+            <button type="submit" class="mode-toggle @(Model.FlagMode ? "on" : "")" aria-pressed="@(Model.FlagMode ? "true" : "false")">
+                @(Model.FlagMode ? "🚩 Flag mode" : "⛏️ Dig mode")
+            </button>
+        </form>
+    </div>
+
+    <div class="board-panel">
+        <div class="scoreboard">
+            <span class="lcd" title="Mines remaining">@game.MinesRemaining.ToString("000")</span>
+            <form method="post" asp-action="New">
+                <button type="submit" name="difficulty" value="@game.Difficulty.Name" class="face" title="New game">@face</button>
+            </form>
+            <span class="lcd" id="timer" title="Seconds"
+                  data-started="@game.StartedAt?.ToUnixTimeMilliseconds()"
+                  data-running="@(game.Status == GameStatus.InProgress ? "true" : "false")">@Math.Min(elapsed, 999).ToString("000")</span>
+        </div>
+
+        @if (game.Status == GameStatus.Won)
+        {
+            <div class="banner win">You cleared the board in @elapsed seconds and @game.MoveCount moves! 🎉</div>
+        }
+        else if (game.Status == GameStatus.Lost)
+        {
+            <div class="banner lose">Boom! You hit a mine. Press 😵 to try again.</div>
+        }
+
+        <form method="post" asp-action="Reveal" id="board" class="board" style="--cols: @game.Columns">
+            @for (var r = 0; r < game.Rows; r++)
+            {
+                for (var c = 0; c < game.Columns; c++)
+                {
+                    var cell = game[r, c];
+                    var label = $"Row {r + 1}, column {c + 1}";
+
+                    if (game.IsFinished && cell.IsMine && !cell.IsFlagged)
+                    {
+                        <span class="cell mine @(cell.IsExploded ? "exploded" : "")" aria-label="@label: mine">💣</span>
+                    }
+                    else if (game.Status == GameStatus.Lost && cell.IsFlagged && !cell.IsMine)
+                    {
+                        <span class="cell hidden wrong" aria-label="@label: wrong flag">❌</span>
+                    }
+                    else if (cell.IsRevealed)
+                    {
+                        var text = cell.AdjacentMines > 0 ? cell.AdjacentMines.ToString() : "";
+                        if (cell.AdjacentMines > 0 && !game.IsFinished)
+                        {
+                            <button type="submit" class="cell revealed n@(cell.AdjacentMines)"
+                                    asp-action="Reveal" asp-route-row="@r" asp-route-col="@c"
+                                    aria-label="@label: @text">@text</button>
+                        }
+                        else
+                        {
+                            <span class="cell revealed n@(cell.AdjacentMines)" aria-label="@label: @text">@text</span>
+                        }
+                    }
+                    else if (game.IsFinished)
+                    {
+                        <span class="cell hidden" aria-label="@label">@(cell.IsFlagged ? "🚩" : "")</span>
+                    }
+                    else
+                    {
+                        <button type="submit" class="cell hidden" data-row="@r" data-col="@c"
+                                asp-action="Reveal" asp-route-row="@r" asp-route-col="@c"
+                                aria-label="@label@(cell.IsFlagged ? ": flagged" : "")">@(cell.IsFlagged ? "🚩" : "")</button>
+                    }
+                }
+            }
+        </form>
+
+        @* Right-clicks are posted through this form by site.js *@
+        <form method="post" asp-action="Flag" id="flag-form" hidden>
+            <input type="hidden" name="row" />
+            <input type="hidden" name="col" />
+        </form>
+    </div>
+
+    <p class="hint">Right-click to flag · @game.MoveCount moves · @game.Difficulty.Columns × @game.Difficulty.Rows, @game.MineCount mines</p>
+</section>

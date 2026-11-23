@@ -1,8 +1,53 @@
-﻿@{
-    ViewData["Title"] = "Home Page";
+@model IReadOnlyList<Difficulty>
+@{
+    ViewData["Title"] = "Home";
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://docs.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
-</div>
+<section class="hero">
+    <h1>Minesweeper, built with <span class="accent">Model–View–Controller</span></h1>
+    <p class="lead">
+        A classic game used to show how ASP.NET Core MVC separates game rules (Model),
+        HTML rendering (View) and request handling (Controller).
+    </p>
+</section>
+
+<section>
+    <h2>Pick a board</h2>
+    <form method="post" asp-controller="Game" asp-action="New" class="difficulty-cards">
+        @foreach (var d in Model)
+        {
+            <button type="submit" name="difficulty" value="@d.Name" class="card">
+                <span class="card-title">@d.Name</span>
+                <span class="card-meta">@d.Columns × @d.Rows · @d.Mines mines</span>
+            </button>
+        }
+    </form>
+</section>
+
+<section>
+    <h2>How it fits together</h2>
+    <div class="mvc-grid">
+        <article class="mvc model">
+            <h3>Model</h3>
+            <p><code>MinesweeperGame</code> owns the board, mine placement, flood fill and win/loss rules. It knows nothing about the web.</p>
+        </article>
+        <article class="mvc controller">
+            <h3>Controller</h3>
+            <p><code>GameController</code> receives each click as a POST, calls the model, saves it per session and redirects.</p>
+        </article>
+        <article class="mvc view">
+            <h3>View</h3>
+            <p><code>Game/Index.cshtml</code> is a Razor template that only reads the model and renders the board as HTML.</p>
+        </article>
+    </div>
+</section>
+
+<section class="how-to">
+    <h2>How to play</h2>
+    <ul>
+        <li><strong>Left-click</strong> a square to reveal it. Your first click is always safe.</li>
+        <li><strong>Right-click</strong> (or switch to <em>Flag mode</em> on touch screens) to flag a mine.</li>
+        <li>Click a revealed number with all its flags placed to clear its neighbours.</li>
+        <li>Reveal every square that isn't a mine to win.</li>
+    </ul>
+</section>
